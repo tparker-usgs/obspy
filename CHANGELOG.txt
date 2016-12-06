@@ -80,6 +80,9 @@ master: (doi: 10.5281/zenodo.165135)
  - obspy.signal:
    * New obspy.signal.quality_control module to compute quality metrics from
      MiniSEED files. (see #1141)
+   * add new plotting capabilities to PPSD (temporal variations per frequency
+     and spectrogram-like plot) and also make underlying processed PSDs
+     available via `PPSD.psd_values` property (see #1327)
  - obspy.taup:
    * Add obspy.taup.taup_geo.calc_dist_azi, a function to return the distance,
      azimuth and backazimuth for a source - receiver pair. (see #1538)
