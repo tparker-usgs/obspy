@@ -7,6 +7,7 @@ import os
 import unittest
 import datetime
 import warnings
+import random
 
 import numpy as np
 
@@ -14,6 +15,7 @@ from obspy import UTCDateTime, read
 from obspy.core.util import NamedTemporaryFile
 from obspy.geodetics import gps2dist_azimuth, kilometer2degrees
 
+from .. import header as HD
 from ..sactrace import SACTrace
 from ..util import SacHeaderError, SacHeaderTimeError
 
@@ -247,6 +249,18 @@ class SACTraceTestCase(unittest.TestCase):
             self.assertEqual(len(w), 1)
             self.assertIn("Reference time information incomplete", str(w[0]))
 
+    def test_floatheader(self):
+        floatval = random.random()
+        sac = SACTrace()
+        for hdr in ('delta', 'scale', 'odelta', 'internal0', 'stel', 'stdp',
+                    'evdp', 'mag', 'user0', 'user1', 'user2', 'user3', 'user4',
+                    'user5', 'user6', 'user7', 'user8', 'user9', 'dist', 'az',
+                    'baz', 'gcarc', 'cmpaz', 'cmpinc'):
+            # test setting
+            setattr(sac, hdr, floatval)
+            self.assertAlmostEqual(sac._hf[HD.FLOATHDRS.index(hdr)], floatval)
+            # test getting
+            self.assertAlmostEqual(getattr(sac, hdr), floatval)
 
 def suite():
     return unittest.makeSuite(SACTraceTestCase, 'test')
