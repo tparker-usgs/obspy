@@ -17,6 +17,7 @@ import doctest
 import inspect
 import io
 import os
+import pkg_resources
 import sys
 import tempfile
 from collections import OrderedDict
@@ -31,9 +32,9 @@ from obspy.core.util.misc import to_int_or_zero
 
 # defining ObsPy modules currently used by runtests and the path function
 DEFAULT_MODULES = ['clients.filesystem', 'core', 'db', 'geodetics', 'imaging',
-                   'io.ah', 'io.ascii', 'io.cmtsolution', 'io.cnv', 'io.css',
-                   'io.datamark', 'io.gcf', 'io.gse2', 'io.json',
-                   'io.kinemetrics', 'io.kml', 'io.mseed', 'io.ndk',
+                   'io.ah', 'io.arclink', 'io.ascii', 'io.cmtsolution',
+                   'io.cnv', 'io.css', 'io.win', 'io.gcf', 'io.gse2',
+                   'io.json', 'io.kinemetrics', 'io.kml', 'io.mseed', 'io.ndk',
                    'io.nied', 'io.nlloc', 'io.nordic', 'io.pdas', 'io.pde',
                    'io.quakeml', 'io.reftek', 'io.sac', 'io.seg2', 'io.segy',
                    'io.seisan', 'io.sh', 'io.shapefile', 'io.seiscomp',
@@ -47,7 +48,7 @@ ALL_MODULES = DEFAULT_MODULES + NETWORK_MODULES
 # default order of automatic format detection
 WAVEFORM_PREFERRED_ORDER = ['MSEED', 'SAC', 'GSE2', 'SEISAN', 'SACXY', 'GSE1',
                             'Q', 'SH_ASC', 'SLIST', 'TSPAIR', 'Y', 'PICKLE',
-                            'SEGY', 'SU', 'SEG2', 'WAV', 'DATAMARK', 'CSS',
+                            'SEGY', 'SU', 'SEG2', 'WAV', 'WIN', 'CSS',
                             'NNSA_KB_CORE', 'AH', 'PDAS', 'KINEMETRICS_EVT',
                             'GCF']
 EVENT_PREFERRED_ORDER = ['QUAKEML', 'NLLOC_HYP']
@@ -323,77 +324,13 @@ def _get_function_from_entry_point(group, type):
     return func
 
 
-def get_matplotlib_version():
+def get_dependency_version(package_name):
     """
-    Get matplotlib version information.
+    Get version information of a dependency package.
 
-    :returns: Matplotlib version as a list of three integers or ``None`` if
-        matplotlib import fails.
-        The last version number can indicate different things like it being a
-        version from the old svn trunk, the latest git repo, some release
-        candidate version, ...
-        If the last number cannot be converted to an integer it will be set to
-        0.
-    """
-    try:
-        import matplotlib
-        version = matplotlib.__version__
-        version = version.split("rc")[0].strip("~")
-        version = list(map(to_int_or_zero, version.split(".")))
-    except ImportError:
-        version = None
-    return version
-
-
-def get_basemap_version():
-    """
-    Get basemap version information.
-
-    :returns: basemap version as a list of three integers or ``None`` if
-        basemap import fails.
-        The last version number can indicate different things like it being a
-        version from the old svn trunk, the latest git repo, some release
-        candidate version, ...
-        If the last number cannot be converted to an integer it will be set to
-        0.
-    """
-    try:
-        from mpl_toolkits import basemap
-        version = basemap.__version__
-        version = version.split("rc")[0].strip("~")
-        version = list(map(to_int_or_zero, version.split(".")))
-    except ImportError:
-        version = None
-    return version
-
-
-def get_cartopy_version():
-    """
-    Get cartopy version information.
-
-    :returns: Cartopy version as a list of three integers or ``None`` if
-        cartopy import fails.
-        The last version number can indicate different things like it being a
-        version from the old svn trunk, the latest git repo, some release
-        candidate version, ...
-        If the last number cannot be converted to an integer it will be set to
-        0.
-    """
-    try:
-        import cartopy
-        version = cartopy.__version__
-        version = version.split("rc")[0].strip("~")
-        version = list(map(to_int_or_zero, version.split(".")))
-    except ImportError:
-        version = None
-    return version
-
-
-def get_scipy_version():
-    """
-    Get SciPy version information.
-
-    :returns: SciPy version as a list of three integers or ``None`` if scipy
+    :type package_name: str
+    :param package_name: Name of package to return version info for
+    :returns: Package version as a list of three integers or ``None`` if
         import fails.
         The last version number can indicate different things like it being a
         version from the old svn trunk, the latest git repo, some release
@@ -402,13 +339,19 @@ def get_scipy_version():
         0.
     """
     try:
-        import scipy
-        version = scipy.__version__
-        version = version.split("~rc")[0]
-        version = list(map(to_int_or_zero, version.split(".")))
-    except ImportError:
-        version = None
+        version = pkg_resources.get_distribution(package_name).version
+    except pkg_resources.DistributionNotFound:
+        return None
+    version = version.split("rc")[0].strip("~")
+    version = list(map(to_int_or_zero, version.split(".")))
     return version
+
+
+NUMPY_VERSION = get_dependency_version('numpy')
+SCIPY_VERSION = get_dependency_version('scipy')
+MATPLOTLIB_VERSION = get_dependency_version('matplotlib')
+BASEMAP_VERSION = get_dependency_version('basemap')
+CARTOPY_VERSION = get_dependency_version('cartopy')
 
 
 def _read_from_plugin(plugin_type, filename, format=None, **kwargs):

@@ -85,7 +85,7 @@ EXTERNAL_LIBS = False
 KEYWORDS = [
     'ArcLink', 'array', 'array analysis', 'ASC', 'beachball',
     'beamforming', 'cross correlation', 'database', 'dataless',
-    'Dataless SEED', 'datamark', 'earthquakes', 'Earthworm', 'EIDA',
+    'Dataless SEED', 'win', 'earthquakes', 'Earthworm', 'EIDA',
     'envelope', 'ESRI', 'events', 'FDSN', 'features', 'filter',
     'focal mechanism', 'GCF', 'GSE1', 'GSE2', 'hob', 'Tau-P', 'imaging',
     'instrument correction', 'instrument simulation', 'IRIS', 'kinemetrics',
@@ -113,6 +113,7 @@ INSTALL_REQUIRES = [
     'requests']
 EXTRAS_REQUIRE = {
     'tests': ['flake8>=2', 'pyimgur', 'pyproj', 'pep8-naming'],
+    # arclink decryption also works with: pycrypto, cryptography, pycryptodome
     'arclink': ['m2crypto'],
     'io.shapefile': ['gdal'],
     }
@@ -142,7 +143,7 @@ ENTRY_POINTS = {
         'SLIST = obspy.io.ascii.core',
         'PICKLE = obspy.core.stream',
         'CSS = obspy.io.css.core',
-        'DATAMARK = obspy.io.datamark.core',
+        'WIN = obspy.io.win.core',
         'KINEMETRICS_EVT = obspy.io.kinemetrics.core',
         'GSE1 = obspy.io.gse2.core',
         'GSE2 = obspy.io.gse2.core',
@@ -187,9 +188,9 @@ ENTRY_POINTS = {
         'isFormat = obspy.io.css.core:_is_nnsa_kb_core',
         'readFormat = obspy.io.css.core:_read_nnsa_kb_core',
         ],
-    'obspy.plugin.waveform.DATAMARK': [
-        'isFormat = obspy.io.datamark.core:_is_datamark',
-        'readFormat = obspy.io.datamark.core:_read_datamark',
+    'obspy.plugin.waveform.WIN': [
+        'isFormat = obspy.io.win.core:_is_win',
+        'readFormat = obspy.io.win.core:_read_win',
         ],
     'obspy.plugin.waveform.KINEMETRICS_EVT': [
         'isFormat = obspy.io.kinemetrics.core:is_evt',
@@ -353,6 +354,7 @@ ENTRY_POINTS = {
         ],
     'obspy.plugin.inventory': [
         'STATIONXML = obspy.io.stationxml.core',
+        'INVENTORYXML = obspy.io.arclink.inventory',
         'SC3ML = obspy.io.seiscomp.sc3ml',
         'SACPZ = obspy.io.sac.sacpz',
         'CSS = obspy.io.css.station',
@@ -364,6 +366,10 @@ ENTRY_POINTS = {
         'isFormat = obspy.io.stationxml.core:_is_stationxml',
         'readFormat = obspy.io.stationxml.core:_read_stationxml',
         'writeFormat = obspy.io.stationxml.core:_write_stationxml',
+        ],
+    'obspy.plugin.inventory.INVENTORYXML': [
+        'isFormat = obspy.io.arclink.inventory:_is_inventory_xml',
+        'readFormat = obspy.io.arclink.inventory:_read_inventory_xml',
         ],
     'obspy.plugin.inventory.SC3ML': [
         'isFormat = obspy.io.seiscomp.sc3ml:_is_sc3ml',
@@ -729,6 +735,7 @@ def setupPackage():
             'Programming Language :: Python :: 3.3',
             'Programming Language :: Python :: 3.4',
             'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
             'Topic :: Scientific/Engineering',
             'Topic :: Scientific/Engineering :: Physics'],
         keywords=KEYWORDS,

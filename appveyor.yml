@@ -15,7 +15,7 @@ environment:
     # a later point release.
     # See: http://www.appveyor.com/docs/installed-software#python
 
-    # - PYTHON: "C:\\Miniconda" 
+    # - PYTHON: "C:\\Miniconda"
     #   PYTHON_VERSION: "2.7"
     #   PYTHON_ARCH: "32"
 
@@ -79,13 +79,15 @@ install:
   # Install the build and runtime dependencies of the project.
   - "conda update -q --yes conda"
   - "conda config --add channels conda-forge"
+  # add channel twice to move it to the top of the channel priority list
+  - "conda config --add channels conda-forge"
   # Create a conda environment using the required ObsPy packages.
   - "conda create -q --yes -n test python=%PYTHON_VERSION%"
   - "activate test"
   # Install default dependencies
   #   for now fix requests version, can be changed when a new requests is released (see #1599)
-  - "conda install -q --yes pip numpy scipy \"matplotlib<2\" lxml sqlalchemy mock nose gdal decorator requests basemap jsonschema"
-  # additional dependecies
+  - "conda install -q --yes pip numpy scipy matplotlib lxml sqlalchemy mock nose gdal decorator requests basemap jsonschema"
+  # additional dependencies
   - "pip install pyimgur"
   - "pip install -U future"
   # list package versions
