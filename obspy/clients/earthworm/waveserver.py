@@ -13,6 +13,7 @@ from __future__ import (absolute_import, division, print_function,
 from future.builtins import *  # NOQA @UnusedWildImport
 from future.utils import native_str
 
+from array import array
 import socket
 import struct
 import sys
@@ -102,13 +103,36 @@ class TraceBuf2(object):
         """
         Parse tracebuf char array data into self.data
         """
-        self.data = np.fromstring(dat, self.inputType)
-        ndat = len(self.data)
-        if self.ndata != ndat:
-            msg = 'data count in header (%d) != data count (%d)'
-            print(msg % (self.nsamp, ndat), file=sys.stderr)
-            self.ndata = ndat
+
+        self.data = np.empty(0)
+        self.append_data(dat)
+
         return
+
+    def append_data(self, dat, head=None):
+        """
+        Append char array data to self.data
+        """
+
+        if head == None:
+            head = self
+
+        new_data = np.fromstring(dat, head.inputType)
+        ndat = len(new_data)
+        if ndat != head.ndata:
+            msg = 'data count in header (%d) != data count (%d)'
+            print(msg % (head.ndata, ndat), file=sys.stderr)
+
+        self.data = np.concatenate((self.data, new_data))
+        self.ndata = len(self.data)
+        self.end = head.end
+
+        return
+
+    def parse_list(self, tbs):
+        self.data = np.concatenate(tbs)
+        #self.data.dtype = self.inputType
+        self.ndata = len(self.data)
 
     def get_obspy_trace(self):
         """
@@ -249,13 +273,14 @@ def get_menu(server, port, scnl=None, timeout=None):
         return outlist
     return []
 
-
-def read_wave_server_v(server, port, scnl, start, end, timeout=None):
+def read_wave_server_v(server, port, scnl, start, end, timeout=None, unify=False):
     """
     Reads data for specified time interval and scnl on specified waveserverV.
 
     Returns list of TraceBuf2 objects
     """
+    a = UTCDateTime()
+
     rid = 'rwserv'
     scnlstr = '%s %s %s %s' % scnl
     reqstr = 'GETSCNLRAW: %s %s %f %f\n' % (rid, scnlstr, start, end)
@@ -271,28 +296,55 @@ def read_wave_server_v(server, port, scnl, start, end, timeout=None):
         print(msg % (flag, RETURNFLAG_KEY[flag]), file=sys.stderr)
         return []
     nbytes = int(tokens[-1])
+    b = UTCDateTime()
+    print(":1: " + str(b-a))
     dat = get_sock_bytes(sock, nbytes, timeout=timeout)
     sock.close()
+    a = UTCDateTime()
+    print(":2: " + str(a-b))
+
     tbl = []
-    new = TraceBuf2()  # empty..filled below
     bytesread = 1
     p = 0
+    current_tb = None
+
     while bytesread and p < len(dat):
-        if len(dat) > p + 64:
-            head = dat[p:p + 64]
-            p += 64
-            new.parse_header(head)
-            nbytes = new.ndata * new.inputType.itemsize
+        if not len(dat) > p + 64:
+            break # no tracebufs left
 
-            if len(dat) < p + nbytes:
-                break   # not enough array to hold data specified in header
+        new = TraceBuf2()
+        new.parse_header(dat[p:p + 64])
+        p += 64
+        nbytes = new.ndata * new.inputType.itemsize
 
-            tbd = dat[p:p + nbytes]
-            p += nbytes
-            new.parse_data(tbd)
+        if len(dat) < p + nbytes:
+            break   # not enough array to hold data specified in header
 
-            tbl.append(new)
-            new = TraceBuf2()  # empty..filled on next iteration
+        if current_tb is None:
+            # new.parse_data(tbd)
+            current_tb = new
+            period = 1 / current_tb.rate
+            bufs = [np.fromstring(dat[p:p + nbytes], current_tb.inputType)]
+
+
+        elif new.start - current_tb.end == period:
+            bufs.append(np.fromstring(dat[p:p + nbytes], current_tb.inputType))
+            current_tb.end = new.end
+
+        else:
+            current_tb.parse_list(bufs)
+            tbl.append(current_tb)
+            current_tb = new
+            period = 1 / current_tb.rate
+            bufs = [np.fromstring(dat[p:p + nbytes], current_tb.inputType)]
+
+        p += nbytes
+
+    current_tb.parse_list(bufs)
+    tbl.append(current_tb)
+
+    b = UTCDateTime()
+    print(":3: " + str(b-a))
     return tbl
 
 
@@ -307,3 +359,42 @@ def trace_bufs2obspy_stream(tbuflist):
         tlist.append(tb.get_obspy_trace())
     strm = Stream(tlist)
     return strm
+
+def test():
+    tbl = read_wave_server_v('pubavo1.wr.usgs.gov', 16022, ('AKS', 'EHZ', 'AV', '--'), UTCDateTime() - 2000, UTCDateTime())
+    end = UTCDateTime()
+    print(len(tbl))
+    period = 1/tbl[0].rate
+    line = ""
+    for tb in tbl:
+        start = tb.start
+        offset = start - end
+        if offset != period:
+            print(line + str(end))
+            line = str(start) + " - "
+
+        end = tb.end
+
+    print(line + str(end))
+    print("test")
+
+if __name__ == '__main__':
+    from obspy.clients.earthworm import Client
+    client = Client("pubavo1.wr.usgs.gov", 16022)
+    end = UTCDateTime()# now - 2000 seconds
+    start = end - 60 * 10  # now - 2000 seconds
+
+
+    a = UTCDateTime()
+    # st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 10, end)
+    # print(len(st))
+    b = UTCDateTime()
+    print(b-a)
+    st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 60 * 4, end)
+    #st = client.get_waveforms('AV', 'KAHG', '', 'EHZ', end - 5, end)
+    print(len(st))
+    a = UTCDateTime()
+    print (a-b)
+    st.plot()  # doctest: +SKIP
+    #st = client.get_waveforms('AV', 'ACH', '', 'EH*', dt, dt + 10)
+    #st.plot()  # doctest: +SKIP

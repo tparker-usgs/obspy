@@ -96,6 +96,7 @@ class Client(object):
             st.plot()
         """
         # replace wildcards in last char of channel and fetch all 3 components
+        a = UTCDateTime()
         if channel[-1] in "?*":
             st = Stream()
             for comp in ("Z", "N", "E"):
@@ -109,7 +110,7 @@ class Client(object):
         scnl = (station, channel, network, location)
         # fetch waveform
         tbl = read_wave_server_v(self.host, self.port, scnl, starttime,
-                                 endtime, timeout=self.timeout)
+                                 endtime, timeout=self.timeout, unify=True)
         # create new stream
         st = Stream()
         for tb in tbl:
@@ -118,8 +119,9 @@ class Client(object):
             st._cleanup()
 
 	# only traces from the first and last tracebug need to be trimmed
-        st[0].trim(starttime, endtime)
-        st[len(st)-1].trim(starttime, endtime)
+        st.trim(starttime, endtime)
+        #st[0].trim(starttime, endtime)
+        #st[len(st)-1].trim(starttime, endtime)
 
         return st
 
