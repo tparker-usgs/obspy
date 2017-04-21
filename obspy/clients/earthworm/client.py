@@ -47,7 +47,7 @@ class Client(object):
         self.debug = debug
 
     def get_waveforms(self, network, station, location, channel, starttime,
-                      endtime, cleanup=True):
+                      endtime, cleanup=True, unify=False):
         """
         Retrieves waveform data from Earthworm Wave Server and returns an ObsPy
         Stream object.
@@ -103,14 +103,14 @@ class Client(object):
                 channel_new = channel[:-1] + comp
                 st += self.get_waveforms(network, station, location,
                                          channel_new, starttime, endtime,
-                                         cleanup=cleanup)
+                                         cleanup=cleanup, unify=unify)
             return st
         if location == '':
             location = '--'
         scnl = (station, channel, network, location)
         # fetch waveform
         tbl = read_wave_server_v(self.host, self.port, scnl, starttime,
-                                 endtime, timeout=self.timeout, unify=True)
+                                 endtime, timeout=self.timeout, unify=unify)
         # create new stream
         st = Stream()
         for tb in tbl:
