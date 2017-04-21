@@ -170,11 +170,7 @@ def send_sock_req(server, port, req_str, timeout=None):
     totalsent = 0
 
     while totalsent < req_len:
-<<<<<<< HEAD
         sent = s.send(full_req[totalsent:])
-=======
-        sent = s.send(full_req[totalsend:])
->>>>>>> 1a7a872f68db9677aa5ed5b315dcbd958751ee8e
         if sent == 0:
             raise RuntimeError("socket connection broken")
         totalsent = totalsent + sent
