@@ -111,13 +111,6 @@ class TraceBuf2(object):
             self.ndata = ndat
         return
 
-    def parse_list(self, tbs):
-        """
-        Populate self.data from list of arrays
-        """
-        self.data = np.concatenate(tbs)
-        self.ndata = len(self.data)
-
     def get_obspy_trace(self):
         """
         Return class contents as obspy.Trace object
@@ -257,7 +250,8 @@ def get_menu(server, port, scnl=None, timeout=None):
         return outlist
     return []
 
-def read_wave_server_v(server, port, scnl, start, end, timeout=None, unify=False):
+
+def read_wave_server_v(server, port, scnl, start, end, timeout=None, cleanup=False):
     """
     Reads data for specified time interval and scnl on specified waveserverV.
 
@@ -284,10 +278,11 @@ def read_wave_server_v(server, port, scnl, start, end, timeout=None, unify=False
     tbl = []
     bytesread = 1
     p = 0
+    dat_len = len(dat)
     current_tb = None
 
-    while bytesread and p < len(dat):
-        if not len(dat) > p + 64:
+    while bytesread and p < dat_len:
+        if not dat_len > p + 64:
             break # no tracebufs left
 
         new_tb = TraceBuf2()
@@ -295,27 +290,38 @@ def read_wave_server_v(server, port, scnl, start, end, timeout=None, unify=False
         p += 64
         nbytes = new_tb.ndata * new_tb.inputType.itemsize
 
-        if len(dat) < p + nbytes:
+        if dat_len < p + nbytes:
             break   # not enough array to hold data specified in header
+
+        if current_tb is not None:
+            if cleanup and new_tb.start - current_tb.end == period:
+                bufs.append(np.fromstring(dat[p:p + nbytes], current_tb.inputType))
+                current_tb.end = new_tb.end
+            else:
+
+                if len(bufs) > 1:
+                    current_tb.data = np.concatenate(bufs)
+                else:
+                    current_tb.data = bufs[0]
+
+                current_tb.ndata = len(current_tb.data)
+                current_tb = None
 
         if current_tb is None:
             current_tb = new_tb
+            tbl.append(current_tb)
             period = 1 / current_tb.rate
             bufs = [np.fromstring(dat[p:p + nbytes], current_tb.inputType)]
 
-        elif unify and new_tb.start - current_tb.end == period:
-            bufs.append(np.fromstring(dat[p:p + nbytes], current_tb.inputType))
-            current_tb.end = new_tb.end
-
-        else:
-            current_tb.parse_list(bufs)
-            tbl.append(current_tb)
-            current_tb = None
-
         p += nbytes
 
-    current_tb.parse_list(bufs)
-    tbl.append(current_tb)
+    if len(bufs) > 1:
+        current_tb.data = np.concatenate(bufs)
+    else:
+        current_tb.data = bufs[0]
+    #current_tb.data = np.concatenate(bufs)
+
+    current_tb.ndata = len(current_tb.data)
 
     return tbl
 
@@ -351,22 +357,36 @@ def test():
     print("test")
 
 if __name__ == '__main__':
-    from obspy.clients.earthworm import Client
+
+    from os import sys, path
+    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
+    from client import Client
+
     client = Client("pubavo1.wr.usgs.gov", 16022)
     end = UTCDateTime()# now - 2000 seconds
     start = end - 60 * 10  # now - 2000 seconds
 
 
     a = UTCDateTime()
-    # st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 10, end)
+    #st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 60 * 12, end)
     # print(len(st))
     b = UTCDateTime()
     print(b-a)
-    st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 60 * 4, end, unify=True)
+    st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 60 * 24, end)
     print("traces: " + str(len(st)))
     #st = client.get_waveforms('AV', 'KAHG', '', 'EHZ', end - 5, end)
     a = UTCDateTime()
     print (a-b)
-    st.plot()  # doctest: +SKIP
+    #st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 60 * 12, end, cleanup=False)
+    # print(len(st))
+    b = UTCDateTime()
+    print(b-a)
+    st = client.get_waveforms('AV', 'ACH', '', 'EHE', end - 60 * 60 * 24, end, cleanup=False)
+    print("traces: " + str(len(st)))
+    #st = client.get_waveforms('AV', 'KAHG', '', 'EHZ', end - 5, end)
+    a = UTCDateTime()
+    print (a-b)
+    # st.plot()  # doctest: +SKIP
     #st = client.get_waveforms('AV', 'ACH', '', 'EH*', dt, dt + 10)
     #st.plot()  # doctest: +SKIP

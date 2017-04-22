@@ -17,6 +17,9 @@ from future.builtins import *  # NOQA @UnusedWildImport
 from fnmatch import fnmatch
 
 from obspy import Stream, UTCDateTime
+
+from os import sys, path
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 from .waveserver import get_menu, read_wave_server_v
 
 
@@ -47,7 +50,7 @@ class Client(object):
         self.debug = debug
 
     def get_waveforms(self, network, station, location, channel, starttime,
-                      endtime, cleanup=True, unify=False):
+                      endtime, cleanup=True):
         """
         Retrieves waveform data from Earthworm Wave Server and returns an ObsPy
         Stream object.
@@ -103,25 +106,20 @@ class Client(object):
                 channel_new = channel[:-1] + comp
                 st += self.get_waveforms(network, station, location,
                                          channel_new, starttime, endtime,
-                                         cleanup=cleanup, unify=unify)
+                                         cleanup=cleanup)
             return st
         if location == '':
             location = '--'
         scnl = (station, channel, network, location)
         # fetch waveform
         tbl = read_wave_server_v(self.host, self.port, scnl, starttime,
-                                 endtime, timeout=self.timeout, unify=unify)
+                                 endtime, timeout=self.timeout, cleanup=cleanup)
         # create new stream
         st = Stream()
         for tb in tbl:
             st.append(tb.get_obspy_trace())
-        if cleanup:
-            st._cleanup()
 
-	# only traces from the first and last tracebug need to be trimmed
         st.trim(starttime, endtime)
-        #st[0].trim(starttime, endtime)
-        #st[len(st)-1].trim(starttime, endtime)
 
         return st
 
