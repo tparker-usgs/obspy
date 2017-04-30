@@ -105,4 +105,5 @@ The functionality is provided through the following packages:
    obspy.clients.seedlink
    obspy.clients.seishub
    obspy.clients.syngine
+   obspy.clients.winston
    obspy.db

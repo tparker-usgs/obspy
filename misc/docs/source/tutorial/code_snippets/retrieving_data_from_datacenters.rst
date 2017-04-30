@@ -150,3 +150,17 @@ Syngine Service
 Use the :mod:`obspy.clients.syngine` module to download high-frequency global
 synthetic seismograms for any source receiver combination from the IRIS syngine
 service.
+
+---------------
+Winston Wave Server
+---------------
+
++----------------------+--------------------------------+
+| Available Data Types | Format                         |
++======================+================================+
+| Waveforms            | MiniSEED and zipped SAC files  |
++----------------------+--------------------------------+
+
+
+Use the :mod:`obspy.clients.Winston` module to request data from a
+`Winston <https://volcanoes.usgs.gov/Software/winston/>`_ wave server.
