@@ -7,6 +7,8 @@ Winston wave server client for ObsPy.
 :license:
     GNU Lesser General Public License, Version 3
     (https://www.gnu.org/copyleft/lesser.html)
+
+.. seealso:: http://volcanoes.usgs.gov/software/winston
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
@@ -154,7 +156,7 @@ class Client(object):
 
         .. rubric:: Example
 
-        >>> from obspy.clients.earthworm import Client
+        >>> from obspy.clients.winston import Client
         >>> client = Client("pubavo1.wr.usgs.gov", 16022)
         >>> t = UTCDateTime() - 2000  # now - 2000 seconds
         >>> client.save_waveforms('AV.ACH.--.EHE.mseed',

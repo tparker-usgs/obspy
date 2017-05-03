@@ -12,7 +12,7 @@ from obspy import read
 from obspy.core.utcdatetime import UTCDateTime
 from obspy.core.util import NamedTemporaryFile
 from obspy.core.util.decorator import skip_on_network_error
-from obspy.clients.earthworm import Client
+from obspy.clients.winston import Client
 
 
 class ClientTestCase(unittest.TestCase):
