@@ -16,9 +16,9 @@ from future.utils import native_str
 import socket
 import struct
 import zlib
-
+from datetime import timedelta
 import numpy as np
-
+import math
 from obspy import Trace, UTCDateTime
 from obspy.core import Stats
 
@@ -122,9 +122,73 @@ def get_menu(server, port, scnl=None, timeout=None):
 
 def to_j2ksec(intime):
     """
-    Convert a UTCDateTime into an integer J2kSec
+    Convert a UTCDateTime to an integer J2kSec
     """
     return intime - J2K_EPOCH
+
+def from_j2ksec(intime):
+    """
+    Convert a J2kSec to a UTCDateTime
+    :param intime: 
+    :return: 
+    """
+    return UTCDateTime(intime + J2K_OFFSET)
+
+
+def get_heli(server, port, scnl, start, end, timeout=None, cleanup=False):
+    """
+    Reads data for specified time interval and scnl on specified waveserverV.
+
+    Returns an ObsPy :class:`~obspy.core.stream.Trace` object, containing integer samples in a masked array.
+    """
+    start.precision=0
+    end.precision=0
+    scnlstr = '%s %s %s %s' % scnl
+    reqstr = 'GETSCNLHELIRAW: %s %s %f %f 1\n' % ('GS', scnlstr, to_j2ksec(start), to_j2ksec(end))
+    sock = send_sock_req(server, port, reqstr.encode('ascii', 'strict'),
+                         timeout=timeout)
+    r = get_sock_char_line(sock, timeout=timeout)
+    if not r:
+        return []
+    tokens = str(r.decode()).split()
+    nbytes = int(tokens[-1])
+    dat = zlib.decompress(get_sock_bytes(sock, nbytes, timeout=timeout))
+    sock.close()
+
+    (rows,) = struct.unpack(">i", dat[0:4])
+    rowLen = 3 * 8
+    data = np.zeros(shape=((end - start) * 2))
+    for row in range(rows):
+        readPos = row * rowLen + 4
+        (time, min, max) = struct.unpack(">ddd", dat[readPos:readPos+rowLen])
+        if max > 400000 or min < 300000:
+            print(str(max) + " - " + str(min))
+        sampleTime = from_j2ksec(time)
+        index = int(sampleTime - start) * 2
+        data[index] = max
+        data[index+1] = min
+
+    np.set_printoptions(threshold='nan')
+    #print(data)
+    stat = Stats()
+    stat.network = scnl[2]
+    stat.station = scnl[0]
+    if scnl == '--':
+        stat.location = ''
+    else:
+        stat.location = scnl[3]
+
+    stat.channel = scnl[1]
+    stat.starttime = UTCDateTime(start + J2K_OFFSET)
+
+    stat.sampling_rate = 2
+    stat.npts = (end - start) * 2
+
+    print(stat)
+
+    data = np.ma.masked_equal(data, 0)
+    trace = Trace(data=data, header=stat)
+    return trace
 
 
 def get_wave(server, port, scnl, start, end, timeout=None, cleanup=False):
@@ -156,7 +220,7 @@ def get_wave(server, port, scnl, start, end, timeout=None, cleanup=False):
         stat.location = scnl[3]
 
     stat.channel = scnl[1]
-    stat.starttime = UTCDateTime(start + J2K_OFFSET)
+    stat.starttime = from_j2ksec
 
     stat.sampling_rate = rate
     stat.npts = npts

@@ -11,12 +11,12 @@ obspy.clients.winston - Winston Wave Server module for ObsPy.
 
 Basic Usage
 -----------
-(1) :meth:`~obspy.clients.winston.client.Client.getWaveform()`: The following
+(1) :meth:`~obspy.clients.winston.client.Client.getWaveforms()`: The following
     example illustrates how to request and plot 30 seconds of all three
     short period channels (``"EH*"``) of station ``"ACH"`` of the `Alaska
     Volcano Observatory <https://www.avo.alaska.edu/>`_ (``"AV"``).
 
-    >>> from obspy.clients.earthworm import Client
+    >>> from obspy.clients.winston import Client
     >>> client = Client("pubavo1.wr.usgs.gov", 16022)
     >>> response = client.get_availability('AV', 'ACH', channel='EHE')
     >>> print(response)  # doctest: +SKIP

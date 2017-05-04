@@ -12,15 +12,9 @@ Winston wave server client for ObsPy.
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-from future.builtins import *  # NOQA
 
-import io
-import socket
-import traceback
-from .waveserver import get_wave
-from time import sleep
-
-from obspy import Stream, UTCDateTime, read
+from obspy import Stream, UTCDateTime
+from .waveserver import get_wave, get_heli
 
 
 class Client(object):
@@ -34,8 +28,6 @@ class Client(object):
     :type timeout: int, optional
     :param timeout: Wait this much time before timeout is raised
         (default is ``30``)
-    :type debug: bool, optional
-    :param debug: if ``True``, print debug information (default is ``False``)
 
     .. rubric:: Example
 
@@ -45,18 +37,14 @@ class Client(object):
     >>> st = client.get_waveforms("net", "sta", "loc", "ch?", now - 60 * 60, now)
     >>> print(st)  # doctest: +ELLIPSIS
     """
-    def __init__(self, host, port=16022, timeout=30, debug=False):
+
+    def __init__(self, host, port=16022, timeout=30):
         """
         Initializes access to a Winston wave server
         """
-        if debug:
-            print("int __init__" + host + "/" + str(port) + " timeout=" +
-                  str(timeout))
         self.host = host
         self.port = port
         self.timeout = timeout
-        self.debug = debug
-
 
     def get_waveforms(self, network, station, location, channel, starttime,
                       endtime):
@@ -98,28 +86,145 @@ class Client(object):
 
         """
 
-
         if location == '':
             location = '--'
 
-        scnl = (station, channel, network, location)
         stream = Stream()
-
         if channel[-1] in "?*":
             for comp in ("Z", "N", "E"):
                 channel_new = channel[:-1] + comp
                 scnl = (station, channel_new, network, location)
                 trace = get_wave(self.host, self.port, scnl, starttime,
-                                         endtime, timeout=self.timeout)
+                                 endtime, timeout=self.timeout)
                 stream.append(trace)
 
         else:
+            scnl = (station, channel, network, location)
             trace = get_wave(self.host, self.port, scnl, starttime,
-                                     endtime, timeout=self.timeout)
+                             endtime, timeout=self.timeout)
             stream.append(trace)
 
         return stream
 
+    def get_heli(self, network, station, location, channel, starttime,
+                      endtime):
+        """
+        Retrieves waveform data from a Winston wave server and returns an ObsPy
+        Stream object.
+
+        :type filename: str
+        :param filename: Name of the output file.
+        :type network: str
+        :param network: Network code, e.g. ``'UW'``.
+        :type station: str
+        :param station: Station code, e.g. ``'TUCA'``.
+        :type location: str
+        :param location: Location code, e.g. ``'--'``.
+        :type channel: str
+        :param channel: Channel code, e.g. ``'BHZ'``. Last character (i.e.
+            component) can be a wildcard ('?' or '*') to fetch `Z`, `N` and
+            `E` component.
+        :type starttime: :class:`~obspy.core.utcdatetime.UTCDateTime`
+        :param starttime: Start date and time.
+        :type endtime: :class:`~obspy.core.utcdatetime.UTCDateTime`
+        :param endtime: End date and time.
+        :return: ObsPy :class:`~obspy.core.stream.Stream` object.
+        :type cleanup: bool
+        :param cleanup: Specifies whether perfectly aligned traces should be
+            merged or not. See :meth:`obspy.core.stream.Stream.merge` for
+            ``method=-1``.
+
+        .. rubric:: Example
+
+        >>> from obspy.clients.winston import Client
+        >>> client = Client("pubavo1.wr.usgs.gov", 16022)
+        >>> now = UTCDateTime()
+        >>> st = client.get_heli('AV', 'ACH', '', 'EHE', now - 60 * 60, now)
+        >>> st.plot()  # doctest: +SKIP
+        >>> st = client.get_heli('AV', 'ACH', '', 'EH*', now - 60 * 60, now)
+        >>> st.plot()  # doctest: +SKIP
+
+        """
+
+        if location == '':
+            location = '--'
+
+        stream = Stream()
+        if channel[-1] in "?*":
+            for comp in ("Z", "N", "E"):
+                channel_new = channel[:-1] + comp
+                scnl = (station, channel_new, network, location)
+                trace = get_heli(self.host, self.port, scnl, starttime,
+                                 endtime, timeout=self.timeout)
+                stream.append(trace)
+
+        else:
+            scnl = (station, channel, network, location)
+            trace = get_heli(self.host, self.port, scnl, starttime,
+                             endtime, timeout=self.timeout)
+            stream.append(trace)
+
+        return stream
+
+    def get_rsam(self, network, station, location, channel, starttime,
+                      endtime):
+        """
+        Retrieves waveform data from a Winston wave server and returns an ObsPy
+        Stream object.
+
+        :type filename: str
+        :param filename: Name of the output file.
+        :type network: str
+        :param network: Network code, e.g. ``'UW'``.
+        :type station: str
+        :param station: Station code, e.g. ``'TUCA'``.
+        :type location: str
+        :param location: Location code, e.g. ``'--'``.
+        :type channel: str
+        :param channel: Channel code, e.g. ``'BHZ'``. Last character (i.e.
+            component) can be a wildcard ('?' or '*') to fetch `Z`, `N` and
+            `E` component.
+        :type starttime: :class:`~obspy.core.utcdatetime.UTCDateTime`
+        :param starttime: Start date and time.
+        :type endtime: :class:`~obspy.core.utcdatetime.UTCDateTime`
+        :param endtime: End date and time.
+        :return: ObsPy :class:`~obspy.core.stream.Stream` object.
+        :type cleanup: bool
+        :param cleanup: Specifies whether perfectly aligned traces should be
+            merged or not. See :meth:`obspy.core.stream.Stream.merge` for
+            ``method=-1``.
+
+        .. rubric:: Example
+
+        >>> from obspy.clients.winston import Client
+        >>> client = Client("pubavo1.wr.usgs.gov", 16022)
+        >>> now = UTCDateTime()
+        >>> st = client.get_rsam('AV', 'ACH', '', 'EHE', now - 60 * 60, now)
+        >>> st.plot()  # doctest: +SKIP
+        >>> st = client.get_rsam('AV', 'ACH', '', 'EH*', now - 60 * 60, now)
+        >>> st.plot()  # doctest: +SKIP
+
+        """
+
+        if location == '':
+            location = '--'
+
+        stream = Stream()
+        if channel[-1] in "?*":
+            for comp in ("Z", "N", "E"):
+                channel_new = channel[:-1] + comp
+                scnl = (station, channel_new, network, location)
+                trace = get_rsam(self.host, self.port, scnl, starttime,
+                                 endtime, timeout=self.timeout)
+                stream.append(trace)
+
+        else:
+            scnl = (station, channel, network, location)
+            trace = get_rsam(self.host, self.port, scnl, starttime,
+                             endtime, timeout=self.timeout)
+            stream.append(trace)
+
+        return stream
 
     def save_waveforms(self, filename, network, station, location, channel,
                        starttime, endtime, format="MSEED"):
@@ -167,6 +272,8 @@ class Client(object):
                                 endtime)
         st.write(filename, format=format)
 
+
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod(exclude_empty=True)
